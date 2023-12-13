@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    hostname: rabbitmq
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  sql-storage:
+    container_name: sql-storage
+    image: mcr.microsoft.com/azure-sql-edge
+    restart: unless-stopped
+    ports:
+      - 1433:1433
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SQL_SA_PASSWORD}
+
+  mks6-items:
+    container_name: items
+    image: mks6-items
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: MKS6-Items/MKS6-Items/Dockerfile
+    environment:
+      - ItemsSqlConnectionString=${ITEMS_SQL_CONNECTION_STRING}
+      - RabbitMqHostName=rabbitmq
+    depends_on:
+      - rabbitmq
+      - sql-storage
+    ports:
+      - 8001:80
+
+  mks6-orders:
+    container_name: orders
+    image: mks6-orders
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: MKS6-Orders/MKS6-Orders/Dockerfile
+    environment:
+      - OrdersSqlConnectionString=${ORDERS_SQL_CONNECTION_STRING}
+      - RabbitMqHostName=rabbitmq
+    depends_on:
+      - rabbitmq
+      - sql-storage
+    ports:
+      - 8002:80
